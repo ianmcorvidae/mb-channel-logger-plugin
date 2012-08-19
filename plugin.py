@@ -40,6 +40,7 @@ import supybot.ircutils as ircutils
 import supybot.registry as registry
 import supybot.callbacks as callbacks
 import supybot.commands as commands
+import cgi
 from supybot.i18n import PluginInternationalization, internationalizeDocstring
 _ = PluginInternationalization('MBChannelLogger')
 
@@ -100,8 +101,11 @@ class MBChannelLogger(callbacks.Plugin):
         itself.
         """
         if self.logging_disabled.get(channel):
+            #irc.reply("[off] Logging is on for %s." % channel)
+            irc.queueMsg(ircmsgs.privmsg(channel, "[off] Logging is now on for %s."
+                % channel))
+            irc.noReply()
             del self.logging_disabled[channel]
-            irc.reply("Logging is on for %s." % channel)
         else:
             irc.reply("I'm already logging %s." % channel)
     on = commands.wrap(on, ['channel'])
@@ -145,11 +149,11 @@ class MBChannelLogger(callbacks.Plugin):
         format = self.registryValue('filenameTimestamp', channel)
         return time.strftime(format)
 
-    def getLogName(self, channel):
+    def getLogName(self, channel, fmt):
         if self.registryValue('rotateLogs', channel):
-            return '%s.%s.log' % (channel, self.logNameTimestamp(channel))
+            return '%s.%s.%s' % (channel, self.logNameTimestamp(channel), fmt)
         else:
-            return '%s.log' % channel
+            return '%s.%s' % (channel, fmt)
 
     def getLogDir(self, irc, channel):
         logDir = conf.supybot.directories.log.dirize(self.name())
@@ -170,12 +174,15 @@ class MBChannelLogger(callbacks.Plugin):
         for (irc, logs) in self.logs.items():
             for (channel, log) in logs.items():
                 if self.registryValue('rotateLogs', channel):
-                    name = self.getLogName(channel)
-                    if name != log.name:
-                        log.close()
-                        del logs[channel]
+                    for fmt in ['log', 'pre-html']:
+                        name = self.getLogName(channel, fmt)
+                        logfmt = log.name.split('.')[-1]
+                        namefmt = name.split('.')[-1]
+                        if logfmt == namefmt and name != log.name:
+                            log.close()
+                            del logs[channel]
 
-    def getLog(self, irc, channel):
+    def getLog(self, irc, channel, fmt):
         self.checkLogNames()
         try:
             logs = self.logs[irc]
@@ -186,7 +193,7 @@ class MBChannelLogger(callbacks.Plugin):
             return logs[channel]
         else:
             try:
-                name = self.getLogName(channel)
+                name = self.getLogName(channel, fmt)
                 logDir = self.getLogDir(irc, channel)
                 log = file(os.path.join(logDir, name), 'a')
                 logs[channel] = log
@@ -195,23 +202,26 @@ class MBChannelLogger(callbacks.Plugin):
                 self.log.exception('Error opening log:')
                 return FakeLog()
 
-    def timestamp(self, log):
+    def timestamp(self, log, fmt):
         format = conf.supybot.log.timestampFormat()
+        if fmt == 'log':
+            stringfmt = '%s  ';
+        elif fmt == 'pre-html':
+            stringfmt = '<p><span class="timestamp">%s</span> '
         if format:
-            log.write(time.strftime(format))
-            log.write('  ')
+            log.write(stringfmt % time.strftime(format))
 
     def normalizeChannel(self, irc, channel):
         return ircutils.toLower(channel)
 
-    def doLog(self, irc, channel, s, *args):
+    def doLog(self, irc, channel, fmt, s, *args):
         if not self.registryValue('enable', channel):
             return
         s = format(s, *args)
         channel = self.normalizeChannel(irc, channel)
-        log = self.getLog(irc, channel)
+        log = self.getLog(irc, channel, fmt)
         if self.registryValue('timestamp', channel):
-            self.timestamp(log)
+            self.timestamp(log, fmt)
         if self.registryValue('stripFormatting', channel):
             s = ircutils.stripFormatting(s)
         log.write(s)
@@ -223,33 +233,53 @@ class MBChannelLogger(callbacks.Plugin):
         for channel in recipients.split(','):
             if irc.isChannel(channel) and not self.logging_disabled.get(channel):
                 noLogPrefix = self.registryValue('noLogPrefix', channel)
-                if noLogPrefix and text.startswith(noLogPrefix):
+                if ((noLogPrefix and text.startswith(noLogPrefix)) or
+                   (text.startswith('@on')) or
+                   (text.startswith('mb-chat-logger: on'))):
                     return
                 nick = msg.nick or irc.nick
                 if ircmsgs.isAction(msg):
-                    self.doLog(irc, channel,
+                    self.doLog(irc, channel, 'log',
                                '* %s %s\n', nick, ircmsgs.unAction(msg))
+                    self.doLog(irc, channel, 'pre-html',
+                               '<span class="action privmsg">* <span class="nick">%s</span> %s</span></p>\n', 
+                               cgi.escape(nick),
+                               cgi.escape(ircmsgs.unAction(msg)))
                 else:
-                    self.doLog(irc, channel, '<%s> %s\n', nick, text)
+                    self.doLog(irc, channel, 'log', '<%s> %s\n', nick, text)
+                    self.doLog(irc, channel, 'pre-html', 
+                               '<span class="privmsg"><span class="nick">&lt;%s&gt;</span> %s</span></p>\n', 
+                               cgi.escape(nick), cgi.escape(text))
 
     def doNotice(self, irc, msg):
         (recipients, text) = msg.args
         for channel in recipients.split(','):
             if irc.isChannel(channel):
-                self.doLog(irc, channel, '-%s- %s\n', msg.nick, text)
+                self.doLog(irc, channel, 'log', '-%s- %s\n', msg.nick, text)
+                self.doLog(irc, channel, 'pre-html', 
+                    '<span class="notice"><span class="nick">-%s-</span> %s</span></p>\n', 
+                    cgi.escape(msg.nick), cgi.escape(text))
 
     def doNick(self, irc, msg):
         oldNick = msg.nick
         newNick = msg.args[0]
         for (channel, c) in irc.state.channels.iteritems():
             if newNick in c.users:
-                self.doLog(irc, channel,
+                self.doLog(irc, channel, 'log',
                            '*** %s is now known as %s\n', oldNick, newNick)
+                self.doLog(irc, channel, 'pre-html',
+                           '<span class="nickchange">*** <span class="nick">%s</span> is now known as <span class="nick">%s</span></span></p>\n', 
+                           cgi.escape(oldNick), cgi.escape(newNick))
+
     def doJoin(self, irc, msg):
         for channel in msg.args[0].split(','):
-            self.doLog(irc, channel,
+            self.doLog(irc, channel, 'log',
                        '*** %s <%s> has joined %s\n',
                        msg.nick, msg.prefix, channel)
+            self.doLog(irc, channel, 'pre-html',
+                       '<span class="join">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span></p>\n',
+                       cgi.escape(msg.nick), cgi.escape(msg.prefix), 
+                       cgi.escape(channel))
 
     def doKick(self, irc, msg):
         if len(msg.args) == 3:
@@ -258,12 +288,19 @@ class MBChannelLogger(callbacks.Plugin):
             (channel, target) = msg.args
             kickmsg = ''
         if kickmsg:
-            self.doLog(irc, channel,
+            self.doLog(irc, channel, 'log',
                        '*** %s was kicked by %s (%s)\n',
                        target, msg.nick, kickmsg)
+            self.doLog(irc, channel, 'pre-html',
+                       '<span class="kick">*** <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span></p>\n',
+                       cgi.escape(target), cgi.escape(msg.nick), 
+                       cgi.escape(kickmsg))
         else:
-            self.doLog(irc, channel,
+            self.doLog(irc, channel, 'log',
                        '*** %s was kicked by %s\n', target, msg.nick)
+            self.doLog(irc, channel, 'pre-html',
+                       '<span class="kick">*** <span class="nick">%s</span> was kicked by <span class="nick">%s</span></span></p>\n',
+                       cgi.escape(target), cgi.escape(msg.nick))
 
     def doPart(self, irc, msg):
         if len(msg.args) > 1:
@@ -271,24 +308,36 @@ class MBChannelLogger(callbacks.Plugin):
         else:
             reason = ""
         for channel in msg.args[0].split(','):
-            self.doLog(irc, channel,
+            self.doLog(irc, channel, 'log', 
                        '*** %s <%s> has left %s%s\n',
                        msg.nick, msg.prefix, channel, reason)
+            self.doLog(irc, channel, 'pre-html', 
+                       '<span class="part">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span></p>\n',
+                       cgi.escape(msg.nick), cgi.escape(msg.prefix), 
+                       cgi.escape(channel), cgi.escape(reason))
 
     def doMode(self, irc, msg):
         channel = msg.args[0]
         if irc.isChannel(channel) and msg.args[1:]:
-            self.doLog(irc, channel,
+            self.doLog(irc, channel, 'log',
                        '*** %s sets mode: %s %s\n',
                        msg.nick or msg.prefix, msg.args[1],
                         ' '.join(msg.args[2:]))
+            self.doLog(irc, channel, 'pre-html',
+                       '<span class="modechange">*** <span class="nick">%s</span> sets mode: <span class="channel">%s</span> <span class="modes">%s</span></span></p>\n',
+                       cgi.escape(msg.nick or msg.prefix),
+                       cgi.escape(msg.args[1]),
+                       cgi.escape(' '.join(msg.args[2:])))
 
     def doTopic(self, irc, msg):
         if len(msg.args) == 1:
             return # It's an empty TOPIC just to get the current topic.
         channel = msg.args[0]
-        self.doLog(irc, channel,
+        self.doLog(irc, channel, 'log',
                    '*** %s changes topic to "%s"\n', msg.nick, msg.args[1])
+        self.doLog(irc, channel, 'pre-html',
+                   '<span class="topicchange">*** <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span></p>\n', 
+                   cgi.escape(msg.nick), cgi.escape(msg.args[1]))
 
     def doQuit(self, irc, msg):
         if len(msg.args) == 1:
@@ -299,18 +348,38 @@ class MBChannelLogger(callbacks.Plugin):
             irc = irc.getRealIrc()
         for (channel, chan) in self.lastStates[irc].channels.iteritems():
             if msg.nick in chan.users:
-                self.doLog(irc, channel,
+                self.doLog(irc, channel, 'log',
                            '*** %s <%s> has quit IRC%s\n',
                            msg.nick, msg.prefix, reason)
+                self.doLog(irc, channel, 'pre-html',
+                           '<span class="quit">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span></p>\n',
+                           cgi.escape(msg.nick), cgi.escape(msg.prefix), 
+                           cgi.escape(reason))
 
     def outFilter(self, irc, msg):
+        # First, process the message if it was sent with [off]
+        noLogPrefix = self.registryValue('noLogPrefix', msg.args[0])
+        newarg = False
+        if 'inReplyTo' in msg.tags:
+            msgreply = msg.tags['inReplyTo']
+            if (msgreply.args[1].startswith(noLogPrefix) and
+               not msg.args[1].startswith(noLogPrefix)):
+                newarg = '%s %s' % (noLogPrefix, msg.args[1])
+
+        msgnew = msg
+        if newarg:
+            newargs = list(msg.args)
+            newargs[1] = newarg 
+            msgnew = ircmsgs.IrcMsg(msg=msg, args=tuple(newargs))
+
         # Gotta catch my own messages *somehow* :)
         # Let's try this little trick...
         if msg.command in ('PRIVMSG', 'NOTICE'):
             # Other messages should be sent back to us.
-            m = ircmsgs.IrcMsg(msg=msg, prefix=irc.prefix)
+            m = ircmsgs.IrcMsg(msg=msgnew, prefix=irc.prefix)
             self(irc, m)
-        return msg
+
+        return msgnew
 
 
 Class = MBChannelLogger
