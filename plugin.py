@@ -41,8 +41,38 @@ import supybot.registry as registry
 import supybot.callbacks as callbacks
 import supybot.commands as commands
 import cgi
+import re
 from supybot.i18n import PluginInternationalization, internationalizeDocstring
 _ = PluginInternationalization('MBChannelLogger')
+
+def replaceurls(text):
+    urls = '(?: %s)' % '|'.join("""http telnet gopher file wais
+    ftp""".split())
+    ltrs = r'\w'
+    gunk = r'/#~:.?+=&%@!\-'
+    punc = r'.:?\-'
+    any = "%(ltrs)s%(gunk)s%(punc)s" % { 'ltrs' : ltrs,
+                                         'gunk' : gunk,
+                                         'punc' : punc }
+    url = r"""
+        \b                            # start at word boundary
+            %(urls)s    :             # need resource and a colon
+            [%(any)s]  +?             # followed by one or more
+                                      #  of any valid character, but
+                                      #  be conservative and take only
+                                      #  what you need to....
+        (?=                           # look-ahead non-consumptive assertion
+                [%(punc)s]*           # either 0 or more punctuation
+                (?:   [^%(any)s]      #  followed by a non-url char
+                    |                 #   or end of the string
+                      $
+                )
+        )
+        """ % {'urls' : urls,
+               'any' : any,
+               'punc' : punc }
+    url_re = re.compile(url, re.VERBOSE | re.MULTILINE)
+    return re.sub(url_re, '<a href="\g<0>">\g<0></a>', text)
 
 class FakeLog(object):
     def flush(self):
@@ -244,12 +274,13 @@ class MBChannelLogger(callbacks.Plugin):
                     self.doLog(irc, channel, 'pre-html',
                                '<span class="action privmsg">* <span class="nick">%s</span> %s</span></p>\n', 
                                cgi.escape(nick),
-                               cgi.escape(ircmsgs.unAction(msg)))
+                               replaceurls(cgi.escape(ircmsgs.unAction(msg))))
                 else:
                     self.doLog(irc, channel, 'log', '<%s> %s\n', nick, text)
                     self.doLog(irc, channel, 'pre-html', 
                                '<span class="privmsg"><span class="nick">&lt;%s&gt;</span> %s</span></p>\n', 
-                               cgi.escape(nick), cgi.escape(text))
+                               cgi.escape(nick), 
+                               replaceurls(cgi.escape(text)))
 
     def doNotice(self, irc, msg):
         (recipients, text) = msg.args
@@ -258,7 +289,8 @@ class MBChannelLogger(callbacks.Plugin):
                 self.doLog(irc, channel, 'log', '-%s- %s\n', msg.nick, text)
                 self.doLog(irc, channel, 'pre-html', 
                     '<span class="notice"><span class="nick">-%s-</span> %s</span></p>\n', 
-                    cgi.escape(msg.nick), cgi.escape(text))
+                    cgi.escape(msg.nick), 
+                    replaceurls(cgi.escape(text)))
 
     def doNick(self, irc, msg):
         oldNick = msg.nick
@@ -294,7 +326,7 @@ class MBChannelLogger(callbacks.Plugin):
             self.doLog(irc, channel, 'pre-html',
                        '<span class="kick">*** <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span></p>\n',
                        cgi.escape(target), cgi.escape(msg.nick), 
-                       cgi.escape(kickmsg))
+                       replaceurls(cgi.escape(kickmsg)))
         else:
             self.doLog(irc, channel, 'log',
                        '*** %s was kicked by %s\n', target, msg.nick)
@@ -314,7 +346,8 @@ class MBChannelLogger(callbacks.Plugin):
             self.doLog(irc, channel, 'pre-html', 
                        '<span class="part">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span></p>\n',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
-                       cgi.escape(channel), cgi.escape(reason))
+                       cgi.escape(channel), 
+                       replaceurls(cgi.escape(reason)))
 
     def doMode(self, irc, msg):
         channel = msg.args[0]
@@ -337,7 +370,8 @@ class MBChannelLogger(callbacks.Plugin):
                    '*** %s changes topic to "%s"\n', msg.nick, msg.args[1])
         self.doLog(irc, channel, 'pre-html',
                    '<span class="topicchange">*** <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span></p>\n', 
-                   cgi.escape(msg.nick), cgi.escape(msg.args[1]))
+                   cgi.escape(msg.nick), 
+                   replaceurls(cgi.escape(msg.args[1])))
 
     def doQuit(self, irc, msg):
         if len(msg.args) == 1:
@@ -354,7 +388,7 @@ class MBChannelLogger(callbacks.Plugin):
                 self.doLog(irc, channel, 'pre-html',
                            '<span class="quit">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span></p>\n',
                            cgi.escape(msg.nick), cgi.escape(msg.prefix), 
-                           cgi.escape(reason))
+                           replaceurls(cgi.escape(reason)))
 
     def outFilter(self, irc, msg):
         # First, process the message if it was sent with [off]
