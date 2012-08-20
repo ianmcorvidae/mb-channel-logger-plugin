@@ -272,7 +272,7 @@ class MBChannelLogger(callbacks.Plugin):
                     self.doLog(irc, channel, 'log',
                                '* %s %s\n', nick, ircmsgs.unAction(msg))
                     self.doLog(irc, channel, 'pre-html',
-                               '<span class="action privmsg">* <span class="nick">%s</span> %s</span></p>\n', 
+                               '<span class="action privmsg">&bull; <span class="nick">%s</span> %s</span></p>\n', 
                                cgi.escape(nick),
                                replaceurls(cgi.escape(ircmsgs.unAction(msg))))
                 else:
@@ -300,7 +300,7 @@ class MBChannelLogger(callbacks.Plugin):
                 self.doLog(irc, channel, 'log',
                            '*** %s is now known as %s\n', oldNick, newNick)
                 self.doLog(irc, channel, 'pre-html',
-                           '<span class="nickchange">*** <span class="nick">%s</span> is now known as <span class="nick">%s</span></span></p>\n', 
+                           '<span class="nickchange">&bull;&bull;&bull; <span class="nick">%s</span> is now known as <span class="nick">%s</span></span></p>\n', 
                            cgi.escape(oldNick), cgi.escape(newNick))
 
     def doJoin(self, irc, msg):
@@ -309,7 +309,7 @@ class MBChannelLogger(callbacks.Plugin):
                        '*** %s <%s> has joined %s\n',
                        msg.nick, msg.prefix, channel)
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="join">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span></p>\n',
+                       '<span class="join">&bull;&bull;&bull; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span></p>\n',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel))
 
@@ -324,14 +324,14 @@ class MBChannelLogger(callbacks.Plugin):
                        '*** %s was kicked by %s (%s)\n',
                        target, msg.nick, kickmsg)
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="kick">*** <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span></p>\n',
+                       '<span class="kick">&bull;&bull;&bull; <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span></p>\n',
                        cgi.escape(target), cgi.escape(msg.nick), 
                        replaceurls(cgi.escape(kickmsg)))
         else:
             self.doLog(irc, channel, 'log',
                        '*** %s was kicked by %s\n', target, msg.nick)
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="kick">*** <span class="nick">%s</span> was kicked by <span class="nick">%s</span></span></p>\n',
+                       '<span class="kick">&bull;&bull;&bull; <span class="nick">%s</span> was kicked by <span class="nick">%s</span></span></p>\n',
                        cgi.escape(target), cgi.escape(msg.nick))
 
     def doPart(self, irc, msg):
@@ -344,7 +344,7 @@ class MBChannelLogger(callbacks.Plugin):
                        '*** %s <%s> has left %s%s\n',
                        msg.nick, msg.prefix, channel, reason)
             self.doLog(irc, channel, 'pre-html', 
-                       '<span class="part">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span></p>\n',
+                       '<span class="part">&bull;&bull;&bull; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span></p>\n',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel), 
                        replaceurls(cgi.escape(reason)))
@@ -357,7 +357,7 @@ class MBChannelLogger(callbacks.Plugin):
                        msg.nick or msg.prefix, msg.args[1],
                         ' '.join(msg.args[2:]))
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="modechange">*** <span class="nick">%s</span> sets mode: <span class="channel">%s</span> <span class="modes">%s</span></span></p>\n',
+                       '<span class="modechange">&bull;&bull;&bull; <span class="nick">%s</span> sets mode: <span class="channel">%s</span> <span class="modes">%s</span></span></p>\n',
                        cgi.escape(msg.nick or msg.prefix),
                        cgi.escape(msg.args[1]),
                        cgi.escape(' '.join(msg.args[2:])))
@@ -369,7 +369,7 @@ class MBChannelLogger(callbacks.Plugin):
         self.doLog(irc, channel, 'log',
                    '*** %s changes topic to "%s"\n', msg.nick, msg.args[1])
         self.doLog(irc, channel, 'pre-html',
-                   '<span class="topicchange">*** <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span></p>\n', 
+                   '<span class="topicchange">&bull;&bull;&bull; <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span></p>\n', 
                    cgi.escape(msg.nick), 
                    replaceurls(cgi.escape(msg.args[1])))
 
@@ -386,7 +386,7 @@ class MBChannelLogger(callbacks.Plugin):
                            '*** %s <%s> has quit IRC%s\n',
                            msg.nick, msg.prefix, reason)
                 self.doLog(irc, channel, 'pre-html',
-                           '<span class="quit">*** <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span></p>\n',
+                           '<span class="quit">&bull;&bull;&bull; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span></p>\n',
                            cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                            replaceurls(cgi.escape(reason)))
 
