@@ -237,7 +237,7 @@ class MBChannelLogger(callbacks.Plugin):
         if fmt == 'log':
             stringfmt = '%s  ';
         elif fmt == 'pre-html':
-            stringfmt = '<p id="%s"><a href="#%s" class="timestamp">%s</a> ' % (repr(hirestime), repr(hirestime), '%s')
+            stringfmt = '<p id="%s"><a href="#%s" class="timestamp" title="%s">%s</a> ' % (repr(hirestime), repr(hirestime), '%s', time.strftime('%H:%M:%S', time.gmtime()))
         if format:
             log.write(stringfmt % time.strftime(format, time.gmtime()))
 
