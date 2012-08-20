@@ -10,4 +10,4 @@ Among the changes:
 * Add logging command to tell if logging is on/off
 * When messages are sent with noLogPrefix, don't log them at all (rather than logging a "this message not logged" message)
 * When the bot responds to anything sent with noLogPrefix, have it respond with the same, so as to not leak information
-* Add a basic 'pre-html' format for logs, which can be wrapped with header/footer to make valid HTML
+* Add a basic 'pre-html' format for logs, which can be wrapped with header/footer to make valid HTML (various &lt;span&gt; classes for different types of things, automatic adding of &lt;a&gt; to links, TODO anchors to individual lines)
