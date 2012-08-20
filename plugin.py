@@ -232,14 +232,15 @@ class MBChannelLogger(callbacks.Plugin):
                 return FakeLog()
 
     def timestamp(self, log, fmt):
-        hirestime = time.time()
+        curtime = time.gmtime()
+        lineid = time.strftime('%H-%M-%S-', curtime) + repr(time.time()).split('.')[-1]
         format = conf.supybot.log.timestampFormat()
         if fmt == 'log':
             stringfmt = '%s  ';
         elif fmt == 'pre-html':
-            stringfmt = '<a id="%s" href="#%s" class="timestamp" title="%s">%s</a> ' % (repr(hirestime), repr(hirestime), '%s', time.strftime('%H:%M:%S', time.gmtime()))
+            stringfmt = '<a id="%s" href="#%s" class="timestamp" title="%s">%s</a> ' % (lineid, lineid, '%s', time.strftime('%H:%M:%S', curtime))
         if format:
-            log.write(stringfmt % time.strftime(format, time.gmtime()))
+            log.write(stringfmt % time.strftime(format, curtime))
 
     def normalizeChannel(self, irc, channel):
         return ircutils.toLower(channel)
