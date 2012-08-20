@@ -46,8 +46,7 @@ from supybot.i18n import PluginInternationalization, internationalizeDocstring
 _ = PluginInternationalization('MBChannelLogger')
 
 def replaceurls(text):
-    urls = '(?: %s)' % '|'.join("""http telnet gopher file wais
-    ftp""".split())
+    urls = '(?: %s)' % '|'.join("""http https telnet gopher file wais ftp""".split())
     ltrs = r'\w'
     gunk = r'/#~:.?+=&%@!\-'
     punc = r'.:?\-'
@@ -177,7 +176,7 @@ class MBChannelLogger(callbacks.Plugin):
 
     def logNameTimestamp(self, channel):
         format = self.registryValue('filenameTimestamp', channel)
-        return time.strftime(format)
+        return time.strftime(format, time.gmtime())
 
     def getLogName(self, channel, fmt):
         if self.registryValue('rotateLogs', channel):
@@ -194,7 +193,7 @@ class MBChannelLogger(callbacks.Plugin):
                 logDir = os.path.join(logDir, channel)
             if self.registryValue('directories.timestamp'):
                 format = self.registryValue('directories.timestamp.format')
-                timeDir =time.strftime(format)
+                timeDir =time.strftime(format, time.gmtime())
                 logDir = os.path.join(logDir, timeDir)
         if not os.path.exists(logDir):
             os.makedirs(logDir)
@@ -233,13 +232,14 @@ class MBChannelLogger(callbacks.Plugin):
                 return FakeLog()
 
     def timestamp(self, log, fmt):
+        hirestime = time.time()
         format = conf.supybot.log.timestampFormat()
         if fmt == 'log':
             stringfmt = '%s  ';
         elif fmt == 'pre-html':
-            stringfmt = '<p><span class="timestamp">%s</span> '
+            stringfmt = '<p id="%s"><a href="#%s" class="timestamp">%s</a> ' % (repr(hirestime), repr(hirestime), '%s')
         if format:
-            log.write(stringfmt % time.strftime(format))
+            log.write(stringfmt % time.strftime(format, time.gmtime()))
 
     def normalizeChannel(self, irc, channel):
         return ircutils.toLower(channel)
