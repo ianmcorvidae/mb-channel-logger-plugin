@@ -1,0 +1,43 @@
+body, .reason, .kickmessage {
+    color: #444;
+    font-family: sans-serif;
+    margin-left: 0px;
+}
+a {
+    color: #222266;
+    border-bottom: 1px dotted gray;
+    text-decoration: none;
+}
+p {
+    margin: 0;
+    padding: 7px 0 7px 8px;
+    border-top: 1px solid gray;
+}
+.nick {
+    color: #000;
+    font-weight: bold;
+}
+.channel {
+    color: #881;
+    font-weight: bold;
+}
+.hostmask {
+    color: #111188;
+    font-family: monospace;
+}
+.quit, .part, .kick {
+    color: #aa0000;
+}
+.join {
+    color: #00aa00;
+}
+.action {
+    color: #881188;
+}
+.notice {
+    color: #118888;
+}
+.timestamp {
+    color: #224466;
+    font-family: monospace;
+}
