@@ -237,24 +237,38 @@ class MBChannelLogger(callbacks.Plugin):
         if fmt == 'log':
             stringfmt = '%s  ';
         elif fmt == 'pre-html':
-            stringfmt = '<p id="%s"><a href="#%s" class="timestamp" title="%s">%s</a> ' % (repr(hirestime), repr(hirestime), '%s', time.strftime('%H:%M:%S', time.gmtime()))
+            stringfmt = '<a id="%s" href="#%s" class="timestamp" title="%s">%s</a> ' % (repr(hirestime), repr(hirestime), '%s', time.strftime('%H:%M:%S', time.gmtime()))
         if format:
             log.write(stringfmt % time.strftime(format, time.gmtime()))
 
     def normalizeChannel(self, irc, channel):
         return ircutils.toLower(channel)
 
-    def doLog(self, irc, channel, fmt, s, *args):
+    def doPreface(self, log, irc, channel, fmt, **kwargs):
+        if fmt == 'pre-html':
+            if kwargs.get('cls', False):
+                log.write('<p class="%s">' % kwargs.get('cls'))
+            else:
+                log.write('<p>')
+
+    def doEpilogue(self, log, irc, channel, fmt, **kwargs):
+        if fmt == 'pre-html':
+            log.write('</p>')
+        log.write('\n')
+
+    def doLog(self, irc, channel, fmt, s, *args, **kwargs):
         if not self.registryValue('enable', channel):
             return
         s = format(s, *args)
         channel = self.normalizeChannel(irc, channel)
         log = self.getLog(irc, channel, fmt)
+        self.doPreface(log, irc, channel, fmt, **kwargs)
         if self.registryValue('timestamp', channel):
             self.timestamp(log, fmt)
         if self.registryValue('stripFormatting', channel):
             s = ircutils.stripFormatting(s)
         log.write(s)
+        self.doEpilogue(log, irc, channel, fmt, **kwargs)
         if self.registryValue('flushImmediately'):
             log.flush()
 
@@ -270,27 +284,30 @@ class MBChannelLogger(callbacks.Plugin):
                 nick = msg.nick or irc.nick
                 if ircmsgs.isAction(msg):
                     self.doLog(irc, channel, 'log',
-                               '* %s %s\n', nick, ircmsgs.unAction(msg))
+                               '* %s %s', nick, ircmsgs.unAction(msg))
                     self.doLog(irc, channel, 'pre-html',
-                               '<span class="action privmsg">&bull; <span class="nick">%s</span> %s</span></p>\n', 
+                               '<span>&bull; <span class="nick">%s</span> %s</span>', 
                                cgi.escape(nick),
-                               replaceurls(cgi.escape(ircmsgs.unAction(msg))))
+                               replaceurls(cgi.escape(ircmsgs.unAction(msg))),
+                               cls="action privmsg")
                 else:
-                    self.doLog(irc, channel, 'log', '<%s> %s\n', nick, text)
+                    self.doLog(irc, channel, 'log', '<%s> %s', nick, text)
                     self.doLog(irc, channel, 'pre-html', 
-                               '<span class="privmsg"><span class="nick">&lt;%s&gt;</span> %s</span></p>\n', 
+                               '<span><span class="nick">&lt;%s&gt;</span> %s</span>', 
                                cgi.escape(nick), 
-                               replaceurls(cgi.escape(text)))
+                               replaceurls(cgi.escape(text)),
+                               cls="privmsg")
 
     def doNotice(self, irc, msg):
         (recipients, text) = msg.args
         for channel in recipients.split(','):
             if irc.isChannel(channel):
-                self.doLog(irc, channel, 'log', '-%s- %s\n', msg.nick, text)
+                self.doLog(irc, channel, 'log', '-%s- %s', msg.nick, text)
                 self.doLog(irc, channel, 'pre-html', 
-                    '<span class="notice"><span class="nick">-%s-</span> %s</span></p>\n', 
+                    '<span><span class="nick">-%s-</span> %s</span>', 
                     cgi.escape(msg.nick), 
-                    replaceurls(cgi.escape(text)))
+                    replaceurls(cgi.escape(text)),
+                    cls="notice")
 
     def doNick(self, irc, msg):
         oldNick = msg.nick
@@ -298,20 +315,22 @@ class MBChannelLogger(callbacks.Plugin):
         for (channel, c) in irc.state.channels.iteritems():
             if newNick in c.users:
                 self.doLog(irc, channel, 'log',
-                           '*** %s is now known as %s\n', oldNick, newNick)
+                           '*** %s is now known as %s', oldNick, newNick)
                 self.doLog(irc, channel, 'pre-html',
-                           '<span class="nickchange">&bull;&bull;&bull; <span class="nick">%s</span> is now known as <span class="nick">%s</span></span></p>\n', 
-                           cgi.escape(oldNick), cgi.escape(newNick))
+                           '<span>&bull;&bull;&bull; <span class="nick">%s</span> is now known as <span class="nick">%s</span></span>', 
+                           cgi.escape(oldNick), cgi.escape(newNick),
+                           cls="nickchange")
 
     def doJoin(self, irc, msg):
         for channel in msg.args[0].split(','):
             self.doLog(irc, channel, 'log',
-                       '*** %s <%s> has joined %s\n',
+                       '*** %s <%s> has joined %s',
                        msg.nick, msg.prefix, channel)
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="join">&rarr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span></p>\n',
+                       '<span>&rarr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span>',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
-                       cgi.escape(channel))
+                       cgi.escape(channel),
+                       cls="join")
 
     def doKick(self, irc, msg):
         if len(msg.args) == 3:
@@ -321,18 +340,20 @@ class MBChannelLogger(callbacks.Plugin):
             kickmsg = ''
         if kickmsg:
             self.doLog(irc, channel, 'log',
-                       '*** %s was kicked by %s (%s)\n',
+                       '*** %s was kicked by %s (%s)',
                        target, msg.nick, kickmsg)
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="kick">&larr; <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span></p>\n',
+                       '<span>&larr; <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span>',
                        cgi.escape(target), cgi.escape(msg.nick), 
-                       replaceurls(cgi.escape(kickmsg)))
+                       replaceurls(cgi.escape(kickmsg)),
+                       cls="kick")
         else:
             self.doLog(irc, channel, 'log',
-                       '*** %s was kicked by %s\n', target, msg.nick)
+                       '*** %s was kicked by %s', target, msg.nick)
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="kick">&larr; <span class="nick">%s</span> was kicked by <span class="nick">%s</span></span></p>\n',
-                       cgi.escape(target), cgi.escape(msg.nick))
+                       '<span>&larr; <span class="nick">%s</span> was kicked by <span class="nick">%s</span></span>',
+                       cgi.escape(target), cgi.escape(msg.nick),
+                       cls="kick")
 
     def doPart(self, irc, msg):
         if len(msg.args) > 1:
@@ -341,37 +362,40 @@ class MBChannelLogger(callbacks.Plugin):
             reason = ""
         for channel in msg.args[0].split(','):
             self.doLog(irc, channel, 'log', 
-                       '*** %s <%s> has left %s%s\n',
+                       '*** %s <%s> has left %s%s',
                        msg.nick, msg.prefix, channel, reason)
             self.doLog(irc, channel, 'pre-html', 
-                       '<span class="part">&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span></p>\n',
+                       '<span>&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span>',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel), 
-                       replaceurls(cgi.escape(reason)))
+                       replaceurls(cgi.escape(reason)),
+                       cls="part")
 
     def doMode(self, irc, msg):
         channel = msg.args[0]
         if irc.isChannel(channel) and msg.args[1:]:
             self.doLog(irc, channel, 'log',
-                       '*** %s sets mode: %s %s\n',
+                       '*** %s sets mode: %s %s',
                        msg.nick or msg.prefix, msg.args[1],
                         ' '.join(msg.args[2:]))
             self.doLog(irc, channel, 'pre-html',
-                       '<span class="modechange">&bull;&bull;&bull; <span class="nick">%s</span> sets mode: <span class="channel">%s</span> <span class="modes">%s</span></span></p>\n',
+                       '<span>&bull;&bull;&bull; <span class="nick">%s</span> sets mode: <span class="channel">%s</span> <span class="modes">%s</span></span>',
                        cgi.escape(msg.nick or msg.prefix),
                        cgi.escape(msg.args[1]),
-                       cgi.escape(' '.join(msg.args[2:])))
+                       cgi.escape(' '.join(msg.args[2:])),
+                       cls="modechange")
 
     def doTopic(self, irc, msg):
         if len(msg.args) == 1:
             return # It's an empty TOPIC just to get the current topic.
         channel = msg.args[0]
         self.doLog(irc, channel, 'log',
-                   '*** %s changes topic to "%s"\n', msg.nick, msg.args[1])
+                   '*** %s changes topic to "%s"', msg.nick, msg.args[1])
         self.doLog(irc, channel, 'pre-html',
-                   '<span class="topicchange">&bull;&bull;&bull; <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span></p>\n', 
+                   '<span>&bull;&bull;&bull; <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span>', 
                    cgi.escape(msg.nick), 
-                   replaceurls(cgi.escape(msg.args[1])))
+                   replaceurls(cgi.escape(msg.args[1])),
+                   cls="topicchange")
 
     def doQuit(self, irc, msg):
         if len(msg.args) == 1:
@@ -383,12 +407,13 @@ class MBChannelLogger(callbacks.Plugin):
         for (channel, chan) in self.lastStates[irc].channels.iteritems():
             if msg.nick in chan.users:
                 self.doLog(irc, channel, 'log',
-                           '*** %s <%s> has quit IRC%s\n',
+                           '*** %s <%s> has quit IRC%s',
                            msg.nick, msg.prefix, reason)
                 self.doLog(irc, channel, 'pre-html',
-                           '<span class="quit">&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span></p>\n',
+                           '<span>&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span>',
                            cgi.escape(msg.nick), cgi.escape(msg.prefix), 
-                           replaceurls(cgi.escape(reason)))
+                           replaceurls(cgi.escape(reason)),
+                           cls="quit")
 
     def outFilter(self, irc, msg):
         # First, process the message if it was sent with [off]

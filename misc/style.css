@@ -2,6 +2,7 @@ body, .reason, .kickmessage {
     color: #444;
     font-family: sans-serif;
     margin-left: 0px;
+    margin-right: 0px;
 }
 a {
     color: #222266;
@@ -10,7 +11,7 @@ a {
 }
 p {
     margin: 0;
-    padding: 7px 0 7px 8px;
+    padding: 8px;
     border-top: 1px solid gray;
 }
 .nick {
