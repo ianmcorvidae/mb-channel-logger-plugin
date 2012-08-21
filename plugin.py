@@ -49,7 +49,7 @@ def replaceurls(text):
     urls = '(?: %s)' % '|'.join("""http https telnet gopher file wais ftp""".split())
     ltrs = r'\w'
     gunk = r'/#~:.?+=&%@!\-'
-    punc = r'.:?\-'
+    punc = r'.:;?\-'
     any = "%(ltrs)s%(gunk)s%(punc)s" % { 'ltrs' : ltrs,
                                          'gunk' : gunk,
                                          'punc' : punc }
