@@ -38,6 +38,9 @@ p {
 .notice {
     color: #118888;
 }
+.topicchange {
+    color: #0000aa;
+}
 .timestamp {
     color: #224466;
     font-family: monospace;
