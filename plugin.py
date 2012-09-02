@@ -280,7 +280,8 @@ class MBChannelLogger(callbacks.Plugin):
                 noLogPrefix = self.registryValue('noLogPrefix', channel)
                 if ((noLogPrefix and text.startswith(noLogPrefix)) or
                    (text.startswith('@on')) or
-                   (text.startswith('mb-chat-logger: on'))):
+                   (text.startswith('mb-chat-logger: on')) or
+                   (text.startswith('mb-chat-logger, on'))):
                     return
                 nick = msg.nick or irc.nick
                 if ircmsgs.isAction(msg):
