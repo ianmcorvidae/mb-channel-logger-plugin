@@ -47,9 +47,9 @@ _ = PluginInternationalization('MBChannelLogger')
 
 def replaceurls(text):
     urls = '(?: %s)' % '|'.join("""http https telnet gopher file wais ftp""".split())
-    ltrs = r'\w'
-    gunk = r'/#~:.?+=&%@!\-'
-    punc = r'.:;?\-'
+    ltrs = r'\w'              # Letters
+    gunk = r'/#~:.?+=&%@!\-'  # General/Unknown
+    punc = r'.:;?\-'          # Punctuation
     any = "%(ltrs)s%(gunk)s%(punc)s" % { 'ltrs' : ltrs,
                                          'gunk' : gunk,
                                          'punc' : punc }
@@ -95,6 +95,7 @@ class MBChannelLogger(callbacks.Plugin):
 
     def die(self):
         for log in self._logs():
+            # Do we need to print out html_end() here?
             log.close()
         world.flushers = [x for x in world.flushers if x is not self.flusher]
 
@@ -155,6 +156,7 @@ class MBChannelLogger(callbacks.Plugin):
 
     def reset(self):
         for log in self._logs():
+            # Do We need to print out html_end() here?
             log.close()
         self.logs.clear()
         self.lastMsgs.clear()
@@ -162,8 +164,9 @@ class MBChannelLogger(callbacks.Plugin):
 
     def _logs(self):
         for logs in self.logs.itervalues():
-            for log in logs.itervalues():
-                yield log
+            for channel in logs.itervalues():
+                for log in channel.itervalues():
+                    yield log
 
     def flush(self):
         self.checkLogNames()
@@ -201,13 +204,13 @@ class MBChannelLogger(callbacks.Plugin):
 
     def checkLogNames(self):
         for (irc, logs) in self.logs.items():
-            for (channel, log) in logs.items():
-                if self.registryValue('rotateLogs', channel):
-                    for fmt in ['log', 'pre-html']:
+            for (channel, formats) in logs.items():
+                for (fmt, log) in formats.items():
+                    if self.registryValue('rotateLogs', channel):
                         name = self.getLogName(channel, fmt)
-                        logfmt = log.name.split('.')[-1]
-                        namefmt = name.split('.')[-1]
-                        if logfmt == namefmt and name != log.name:
+                        if name != os.path.split(log.name)[-1]:
+                            if fmt == 'html':
+                                log.write(self.html_end())
                             log.close()
                             del logs[channel]
 
@@ -218,14 +221,29 @@ class MBChannelLogger(callbacks.Plugin):
         except KeyError:
             logs = ircutils.IrcDict()
             self.logs[irc] = logs
-        if channel in logs:
-            return logs[channel]
+        if channel in logs and fmt in logs[channel]:
+                return logs[channel][fmt]
         else:
+            if channel not in logs:
+                logs[channel] = {}
             try:
                 name = self.getLogName(channel, fmt)
                 logDir = self.getLogDir(irc, channel)
-                log = file(os.path.join(logDir, name), 'a')
-                logs[channel] = log
+                logPath = os.path.join(logDir, name)
+                writeHtml = False
+                if fmt == 'html':
+                    try:
+                        with file(logPath, 'r') as log:
+                            # Only write start_html() if it's not already there.
+                            writeHtml = True
+                            for line in log.readlines():
+                                if re.search('<head>', line):
+                                    writeHtml = False
+                    except IOError:
+                        writeHtml = True
+                log = file(logPath, 'a')
+                if writeHtml: log.write(self.html_start(channel, time.gmtime()))
+                logs[channel][fmt] = log
                 return log
             except IOError:
                 self.log.exception('Error opening log:')
@@ -237,7 +255,7 @@ class MBChannelLogger(callbacks.Plugin):
         format = conf.supybot.log.timestampFormat()
         if fmt == 'log':
             stringfmt = '%s  ';
-        elif fmt == 'pre-html':
+        elif fmt == 'html':
             stringfmt = '<a id="%s" href="#%s" class="timestamp" title="%s">%s</a> ' % (lineid, lineid, '%s', time.strftime('%H:%M:%S', curtime))
         if format:
             log.write(stringfmt % time.strftime(format, curtime))
@@ -246,16 +264,45 @@ class MBChannelLogger(callbacks.Plugin):
         return ircutils.toLower(channel)
 
     def doPreface(self, log, irc, channel, fmt, **kwargs):
-        if fmt == 'pre-html':
+        if fmt == 'html':
             if kwargs.get('cls', False):
                 log.write('<p class="%s">' % kwargs.get('cls'))
             else:
                 log.write('<p>')
 
     def doEpilogue(self, log, irc, channel, fmt, **kwargs):
-        if fmt == 'pre-html':
+        if fmt == 'html':
             log.write('</p>')
         log.write('\n')
+
+    def html_start(self, channel, date):
+        """HTML to write at the start of individual log files."""
+        dateformat = self.registryValue('directories.timestamp.format')
+        title = 'IRC log of {channel} on {date}'.format(**{
+            'channel': channel,
+            'date': time.strftime(dateformat, date),
+        })
+        html = """<!DOCTYPE html>
+        <html>
+        <head>
+         <title>{title}</title>
+         <!-- TODO: Fix the path to the stylesheet (in case the below doesn't work. -->
+         <link rel="stylesheet" href="/misc/style.css" type="text/css" />
+         <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+        </head>
+        <body>
+        <h1>{title}</h1>
+        <p>Timestamps are in UTC.</p>
+        """.format(title = title)
+        return html
+
+    def html_end(self):
+        """HTML to write at the end of individual log files."""
+        html = """
+        </body>
+        </html>
+        """
+        return html
 
     def doLog(self, irc, channel, fmt, s, *args, **kwargs):
         if not self.registryValue('enable', channel):
@@ -287,14 +334,14 @@ class MBChannelLogger(callbacks.Plugin):
                 if ircmsgs.isAction(msg):
                     self.doLog(irc, channel, 'log',
                                '* %s %s', nick, ircmsgs.unAction(msg))
-                    self.doLog(irc, channel, 'pre-html',
+                    self.doLog(irc, channel, 'html',
                                '<span>&bull; <span class="nick">%s</span> %s</span>', 
                                cgi.escape(nick),
                                replaceurls(cgi.escape(ircmsgs.unAction(msg))),
                                cls="action privmsg")
                 else:
                     self.doLog(irc, channel, 'log', '<%s> %s', nick, text)
-                    self.doLog(irc, channel, 'pre-html', 
+                    self.doLog(irc, channel, 'html', 
                                '<span><span class="nick">&lt;%s&gt;</span> %s</span>', 
                                cgi.escape(nick), 
                                replaceurls(cgi.escape(text)),
@@ -305,7 +352,7 @@ class MBChannelLogger(callbacks.Plugin):
         for channel in recipients.split(','):
             if irc.isChannel(channel):
                 self.doLog(irc, channel, 'log', '-%s- %s', msg.nick, text)
-                self.doLog(irc, channel, 'pre-html', 
+                self.doLog(irc, channel, 'html', 
                     '<span><span class="nick">-%s-</span> %s</span>', 
                     cgi.escape(msg.nick), 
                     replaceurls(cgi.escape(text)),
@@ -318,7 +365,7 @@ class MBChannelLogger(callbacks.Plugin):
             if newNick in c.users:
                 self.doLog(irc, channel, 'log',
                            '*** %s is now known as %s', oldNick, newNick)
-                self.doLog(irc, channel, 'pre-html',
+                self.doLog(irc, channel, 'html',
                            '<span>&bull;&bull;&bull; <span class="nick">%s</span> is now known as <span class="nick">%s</span></span>', 
                            cgi.escape(oldNick), cgi.escape(newNick),
                            cls="nickchange")
@@ -328,7 +375,7 @@ class MBChannelLogger(callbacks.Plugin):
             self.doLog(irc, channel, 'log',
                        '*** %s <%s> has joined %s',
                        msg.nick, msg.prefix, channel)
-            self.doLog(irc, channel, 'pre-html',
+            self.doLog(irc, channel, 'html',
                        '<span>&rarr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span>',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel),
@@ -344,7 +391,7 @@ class MBChannelLogger(callbacks.Plugin):
             self.doLog(irc, channel, 'log',
                        '*** %s was kicked by %s (%s)',
                        target, msg.nick, kickmsg)
-            self.doLog(irc, channel, 'pre-html',
+            self.doLog(irc, channel, 'html',
                        '<span>&larr; <span class="nick">%s</span> was kicked by <span class="nick">%s</span> <span class="kickmessage">(%s)</span></span>',
                        cgi.escape(target), cgi.escape(msg.nick), 
                        replaceurls(cgi.escape(kickmsg)),
@@ -352,7 +399,7 @@ class MBChannelLogger(callbacks.Plugin):
         else:
             self.doLog(irc, channel, 'log',
                        '*** %s was kicked by %s', target, msg.nick)
-            self.doLog(irc, channel, 'pre-html',
+            self.doLog(irc, channel, 'html',
                        '<span>&larr; <span class="nick">%s</span> was kicked by <span class="nick">%s</span></span>',
                        cgi.escape(target), cgi.escape(msg.nick),
                        cls="kick")
@@ -366,7 +413,7 @@ class MBChannelLogger(callbacks.Plugin):
             self.doLog(irc, channel, 'log', 
                        '*** %s <%s> has left %s%s',
                        msg.nick, msg.prefix, channel, reason)
-            self.doLog(irc, channel, 'pre-html', 
+            self.doLog(irc, channel, 'html', 
                        '<span>&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span>',
                        cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel), 
@@ -380,7 +427,7 @@ class MBChannelLogger(callbacks.Plugin):
                        '*** %s sets mode: %s %s',
                        msg.nick or msg.prefix, msg.args[1],
                         ' '.join(msg.args[2:]))
-            self.doLog(irc, channel, 'pre-html',
+            self.doLog(irc, channel, 'html',
                        '<span>&bull;&bull;&bull; <span class="nick">%s</span> sets mode: <span class="channel">%s</span> <span class="modes">%s</span></span>',
                        cgi.escape(msg.nick or msg.prefix),
                        cgi.escape(msg.args[1]),
@@ -393,7 +440,7 @@ class MBChannelLogger(callbacks.Plugin):
         channel = msg.args[0]
         self.doLog(irc, channel, 'log',
                    '*** %s changes topic to "%s"', msg.nick, msg.args[1])
-        self.doLog(irc, channel, 'pre-html',
+        self.doLog(irc, channel, 'html',
                    '<span>&bull;&bull;&bull; <span class="nick">%s</span> changes topic to <span class="topic">"%s"</span></span>', 
                    cgi.escape(msg.nick), 
                    replaceurls(cgi.escape(msg.args[1])),
@@ -411,7 +458,7 @@ class MBChannelLogger(callbacks.Plugin):
                 self.doLog(irc, channel, 'log',
                            '*** %s <%s> has quit IRC%s',
                            msg.nick, msg.prefix, reason)
-                self.doLog(irc, channel, 'pre-html',
+                self.doLog(irc, channel, 'html',
                            '<span>&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span>',
                            cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                            replaceurls(cgi.escape(reason)),
