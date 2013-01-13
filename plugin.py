@@ -286,8 +286,8 @@ class MBChannelLogger(callbacks.Plugin):
         <html>
         <head>
          <title>{title}</title>
-         <link rel="stylesheet" href="/musicbrainz/style.css" type="text/css" />
-         <script src="/musicbrainz/chatlogs.js" type="text/javascript"></script>
+         <!-- TODO: Fix the path to the stylesheet (in case the below doesn't work. -->
+         <link rel="stylesheet" href="/misc/style.css" type="text/css" />
          <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         </head>
         <body>
