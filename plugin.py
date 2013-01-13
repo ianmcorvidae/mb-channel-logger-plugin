@@ -287,7 +287,7 @@ class MBChannelLogger(callbacks.Plugin):
         <head>
          <title>{title}</title>
          <!-- TODO: Fix the path to the stylesheet (in case the below doesn't work. -->
-         <link rel="stylesheet" href="/misc/style.css" type="text/css" />
+         <link rel="stylesheet" href="../../../../plugins/MBChannelLogger/misc/style.css" type="text/css" />
          <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         </head>
         <body>
