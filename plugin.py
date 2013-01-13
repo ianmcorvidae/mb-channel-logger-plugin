@@ -73,6 +73,37 @@ def replaceurls(text):
     url_re = re.compile(url, re.VERBOSE | re.MULTILINE)
     return re.sub(url_re, '<a href="\g<0>">\g<0></a>', text)
 
+def html_start(channel, date):
+    """HTML to write at the start of individual log files."""
+    dateformat = self.registryValue('directories.timestamp.format')
+    title = 'IRC log of {channel} on {date}'.format(**{
+        'channel': channel,
+        'date': time.strftime(dateformat, date),
+    })
+    html = """<?xml version="1.1" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+ <title>{title}</title>
+ <link rel="stylesheet" href="/musicbrainz/style.css" type="text/css" />
+ <script src="/musicbrainz/chatlogs.js" type="text/javascript"></script>
+ <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<h1>{title}</h1>
+<p>Timestamps are in UTC.</p>
+""".format(title = title)
+    return html
+
+def html_end():
+    """HTML to write at the end of individual log files."""
+    html = """
+</body>
+</html>
+"""
+    return html
+
 class FakeLog(object):
     def flush(self):
         return
@@ -95,6 +126,7 @@ class MBChannelLogger(callbacks.Plugin):
 
     def die(self):
         for log in self._logs():
+            # Do we need to print out html_end() here?
             log.close()
         world.flushers = [x for x in world.flushers if x is not self.flusher]
 
@@ -155,6 +187,7 @@ class MBChannelLogger(callbacks.Plugin):
 
     def reset(self):
         for log in self._logs():
+            # Do We need to print out html_end() here?
             log.close()
         self.logs.clear()
         self.lastMsgs.clear()
@@ -208,6 +241,8 @@ class MBChannelLogger(callbacks.Plugin):
                         logfmt = log.name.split('.')[-1]
                         namefmt = name.split('.')[-1]
                         if logfmt == namefmt and name != log.name:
+                            if fmt == 'pre-html':
+                                log.write(html_end())
                             log.close()
                             del logs[channel]
 
@@ -224,7 +259,15 @@ class MBChannelLogger(callbacks.Plugin):
             try:
                 name = self.getLogName(channel, fmt)
                 logDir = self.getLogDir(irc, channel)
-                log = file(os.path.join(logDir, name), 'a')
+                logPath = os.path.join(logDir, name)
+                writeHtml = False
+                if fmt == 'pre-html':
+                    with file(logPath, 'r') as log:
+                        # Don't write start_html() if it's already been written.
+                        if r'<head>\n' in log.readlines():
+                            writeHtml = False
+                log = file(logPath, 'a')
+                if writeHtml: log.write(html_start(channel, time.gmtime()))
                 logs[channel] = log
                 return log
             except IOError:
