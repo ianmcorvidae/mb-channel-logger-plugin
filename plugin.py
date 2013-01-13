@@ -47,9 +47,9 @@ _ = PluginInternationalization('MBChannelLogger')
 
 def replaceurls(text):
     urls = '(?: %s)' % '|'.join("""http https telnet gopher file wais ftp""".split())
-    ltrs = r'\w'
-    gunk = r'/#~:.?+=&%@!\-'
-    punc = r'.:;?\-'
+    ltrs = r'\w'              # Letters
+    gunk = r'/#~:.?+=&%@!\-'  # General/Unknown
+    punc = r'.:;?\-'          # Punctuation
     any = "%(ltrs)s%(gunk)s%(punc)s" % { 'ltrs' : ltrs,
                                          'gunk' : gunk,
                                          'punc' : punc }
