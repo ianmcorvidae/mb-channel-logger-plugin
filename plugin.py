@@ -277,7 +277,7 @@ class MBChannelLogger(callbacks.Plugin):
 
     def html_start(self, channel, date):
         """HTML to write at the start of individual log files."""
-        dateformat = self.registryValue('directories.timestamp.format')
+        dateformat = self.registryValue('filenameTimestamp', channel)
         title = 'IRC log of {channel} on {date}'.format(**{
             'channel': channel,
             'date': time.strftime(dateformat, date),
