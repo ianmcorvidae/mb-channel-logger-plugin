@@ -85,7 +85,6 @@ def html_start(channel, date):
 <head>
  <title>{title}</title>
  <link rel="stylesheet" href="/musicbrainz/style.css" type="text/css" />
- <script src="/musicbrainz/chatlogs.js" type="text/javascript"></script>
  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 </head>
 <body>
