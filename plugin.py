@@ -263,9 +263,9 @@ class MBChannelLogger(callbacks.Plugin):
                 writeHtml = False
                 if fmt == 'pre-html':
                     with file(logPath, 'r') as log:
-                        # Don't write start_html() if it's already been written.
-                        if r'<head>\n' in log.readlines():
-                            writeHtml = False
+                        # Only write start_html() if it's not already there.
+                        if r'<head>\n' not in log.readlines():
+                            writeHtml = True
                 log = file(logPath, 'a')
                 if writeHtml: log.write(html_start(channel, time.gmtime()))
                 logs[channel] = log
