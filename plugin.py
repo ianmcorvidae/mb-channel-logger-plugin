@@ -294,7 +294,7 @@ class MBChannelLogger(callbacks.Plugin):
         <h1>{title}</h1>
         <p>Timestamps are in UTC.</p>
         """.format(title = title)
-        return html
+        return '\n'.join([line.strip() for line in html.split('\n')])
 
     def html_end(self):
         """HTML to write at the end of individual log files."""
@@ -302,7 +302,7 @@ class MBChannelLogger(callbacks.Plugin):
         </body>
         </html>
         """
-        return html
+        return '\n'.join([line.strip() for line in html.split('\n')])
 
     def doLog(self, irc, channel, fmt, s, *args, **kwargs):
         if not self.registryValue('enable', channel):
