@@ -282,18 +282,19 @@ class MBChannelLogger(callbacks.Plugin):
             'channel': channel,
             'date': time.strftime(dateformat, date),
         })
+        css = self.registryValue('cssLocation')
         html = """<!DOCTYPE html>
         <html>
         <head>
          <title>{title}</title>
          <!-- TODO: Fix the path to the stylesheet (in case the below doesn't work. -->
-         <link rel="stylesheet" href="../../../../plugins/MBChannelLogger/misc/style.css" type="text/css" />
+         <link rel="stylesheet" href="{css}" type="text/css" />
          <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         </head>
         <body>
         <h1>{title}</h1>
         <p>Timestamps are in UTC.</p>
-        """.format(title = title)
+        """.format(title = title, css=css)
         return '\n'.join([line.strip() for line in html.split('\n')])
 
     def html_end(self):

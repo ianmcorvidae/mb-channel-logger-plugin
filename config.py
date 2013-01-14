@@ -45,7 +45,7 @@ MBChannelLogger = conf.registerPlugin('MBChannelLogger')
 conf.registerChannelValue(MBChannelLogger, 'enable',
     registry.Boolean(True, _("""Determines whether logging is enabled.""")))
 conf.registerGlobalValue(MBChannelLogger, 'flushImmediately',
-    registry.Boolean(False, _("""Determines whether channel logfiles will be
+    registry.Boolean(True, _("""Determines whether channel logfiles will be
     flushed anytime they're written to, rather than being buffered by the
     operating system.""")))
 conf.registerChannelValue(MBChannelLogger, 'stripFormatting',
@@ -59,7 +59,7 @@ conf.registerChannelValue(MBChannelLogger, 'noLogPrefix',
     prefixed with in order not to be logged.  If you don't want any such
     prefix, just set it to the empty string.""")))
 conf.registerChannelValue(MBChannelLogger, 'rotateLogs',
-    registry.Boolean(False, _("""Determines whether the bot will automatically
+    registry.Boolean(True, _("""Determines whether the bot will automatically
     rotate the logs for this channel.  The bot will rotate logs when the
     timestamp for the log changes.  The timestamp is set according to
     the 'filenameTimestamp' configuration variable.""")))
@@ -81,12 +81,15 @@ conf.registerGlobalValue(MBChannelLogger.directories, 'channel',
     registry.Boolean(True, _("""Determines whether the bot will use a channel
     directory if using directories.""")))
 conf.registerGlobalValue(MBChannelLogger.directories, 'timestamp',
-    registry.Boolean(False, _("""Determines whether the bot will use a timestamp
+    registry.Boolean(True, _("""Determines whether the bot will use a timestamp
     (determined by supybot.plugins.MBChannelLogger.directories.timestamp.format)
     if using directories.""")))
 conf.registerGlobalValue(MBChannelLogger.directories.timestamp, 'format',
-    registry.String('%B', _("""Determines what timestamp format will be used in
+    registry.String('%Y-%m', _("""Determines what timestamp format will be used in
     the directory structure for channel logs if
     supybot.plugins.MBChannelLogger.directories.timestamp is True.""")))
+conf.registerGlobalValue(MBChannelLogger, 'cssLocation',
+    registry.String('../../../../../plugins/MBChannelLogger/misc/style.css',
+        _("""Defines the location for the log CSS file.""")))
 
 # vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:
