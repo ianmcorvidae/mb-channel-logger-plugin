@@ -212,7 +212,7 @@ class MBChannelLogger(callbacks.Plugin):
                             if fmt == 'html':
                                 log.write(self.html_end())
                             log.close()
-                            del logs[channel]
+                            del logs[channel][fmt]
 
     def getLog(self, irc, channel, fmt):
         self.checkLogNames()
