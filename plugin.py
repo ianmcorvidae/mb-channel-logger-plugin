@@ -377,16 +377,12 @@ class MBChannelLogger(callbacks.Plugin):
 
     def doJoin(self, irc, msg):
         for channel in msg.args[0].split(','):
-            if '/' in msg.prefix:
-                mask = msg.prefix
-            else:
-                mask = ''
             self.doLog(irc, channel, 'log',
                        '*** %s <%s> has joined %s',
-                       msg.nick, mask, channel)
+                       msg.nick, msg.prefix, channel)
             self.doLog(irc, channel, 'html',
                        '<span>&rarr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has joined <span class="channel">%s</span></span>',
-                       cgi.escape(msg.nick), cgi.escape(mask), 
+                       cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel),
                        cls="join")
 
@@ -419,16 +415,12 @@ class MBChannelLogger(callbacks.Plugin):
         else:
             reason = ""
         for channel in msg.args[0].split(','):
-            if '/' in msg.prefix:
-                mask = msg.prefix
-            else:
-                mask = ''
             self.doLog(irc, channel, 'log', 
                        '*** %s <%s> has left %s%s',
-                       msg.nick, mask, channel, reason)
+                       msg.nick, msg.prefix, channel, reason)
             self.doLog(irc, channel, 'html', 
                        '<span>&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has left <span class="channel">%s</span><span class="reason">%s</span></span>',
-                       cgi.escape(msg.nick), cgi.escape(mask), 
+                       cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                        cgi.escape(channel), 
                        replaceurls(cgi.escape(reason)),
                        cls="part")
@@ -468,16 +460,12 @@ class MBChannelLogger(callbacks.Plugin):
             irc = irc.getRealIrc()
         for (channel, chan) in self.lastStates[irc].channels.iteritems():
             if msg.nick in chan.users:
-                if '/' in msg.prefix:
-                    mask = msg.prefix
-                else:
-                    mask = ''
                 self.doLog(irc, channel, 'log',
                            '*** %s <%s> has quit IRC%s',
-                           msg.nick, mask, reason)
+                           msg.nick, msg.prefix, reason)
                 self.doLog(irc, channel, 'html',
                            '<span>&larr; <span class="nick">%s</span> <span class="hostmask">&lt;%s&gt;</span> has quit IRC<span class="reason">%s</span></span>',
-                           cgi.escape(msg.nick), cgi.escape(mask),
+                           cgi.escape(msg.nick), cgi.escape(msg.prefix), 
                            replaceurls(cgi.escape(reason)),
                            cls="quit")
 
