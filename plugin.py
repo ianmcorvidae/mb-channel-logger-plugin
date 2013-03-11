@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ###
 # Copyright (c) 2002-2004, Jeremiah Fincher
 # Copyright (c) 2009-2010, James Vega
@@ -58,7 +59,7 @@ def replaceurls(text):
                                             # (Trying not to match e.g. "URI::Escape")
             )
             |                           #   or
-            www\d{0,3}[.]               # "www.", "www1.", "www2." … "www999."
+            www\d{0,3}[.]               # "www.", "www1.", "www2." ... "www999."
             |                           #   or
             [a-z0-9.\-]+[.][a-z]{2,4}/  # looks like domain name followed by a slash
           )
