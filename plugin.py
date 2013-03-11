@@ -42,8 +42,8 @@ import supybot.callbacks as callbacks
 import supybot.commands as commands
 import cgi
 import re
-from supybot.i18n import PluginInternationalization, internationalizeDocstring
-_ = PluginInternationalization('MBChannelLogger')
+#from supybot.i18n import PluginInternationalization, internationalizeDocstring
+#_ = PluginInternationalization('MBChannelLogger')
 
 def replaceurls(text):
     urls = '(?: %s)' % '|'.join("""http https telnet gopher file wais ftp""".split())

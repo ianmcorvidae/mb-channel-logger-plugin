@@ -30,8 +30,8 @@
 
 import supybot.conf as conf
 import supybot.registry as registry
-from supybot.i18n import PluginInternationalization, internationalizeDocstring
-_ = PluginInternationalization('MBChannelLogger')
+#from supybot.i18n import PluginInternationalization, internationalizeDocstring
+#_ = PluginInternationalization('MBChannelLogger')
 
 def configure(advanced):
     # This will be called by supybot to configure this module.  advanced is
@@ -43,53 +43,53 @@ def configure(advanced):
 
 MBChannelLogger = conf.registerPlugin('MBChannelLogger')
 conf.registerChannelValue(MBChannelLogger, 'enable',
-    registry.Boolean(True, _("""Determines whether logging is enabled.""")))
+    registry.Boolean(True, """Determines whether logging is enabled."""))
 conf.registerGlobalValue(MBChannelLogger, 'flushImmediately',
-    registry.Boolean(True, _("""Determines whether channel logfiles will be
+    registry.Boolean(True, """Determines whether channel logfiles will be
     flushed anytime they're written to, rather than being buffered by the
-    operating system.""")))
+    operating system."""))
 conf.registerChannelValue(MBChannelLogger, 'stripFormatting',
-    registry.Boolean(True, _("""Determines whether formatting characters (such
-    as bolding, color, etc.) are removed when writing the logs to disk.""")))
+    registry.Boolean(True, """Determines whether formatting characters (such
+    as bolding, color, etc.) are removed when writing the logs to disk."""))
 conf.registerChannelValue(MBChannelLogger, 'timestamp',
-    registry.Boolean(True, _("""Determines whether the logs for this channel are
-    timestamped with the timestamp in supybot.log.timestampFormat.""")))
+    registry.Boolean(True, """Determines whether the logs for this channel are
+    timestamped with the timestamp in supybot.log.timestampFormat."""))
 conf.registerChannelValue(MBChannelLogger, 'noLogPrefix',
-    registry.String('[off]', _("""Determines what string a message should be
+    registry.String('[off]', """Determines what string a message should be
     prefixed with in order not to be logged.  If you don't want any such
-    prefix, just set it to the empty string.""")))
+    prefix, just set it to the empty string."""))
 conf.registerChannelValue(MBChannelLogger, 'rotateLogs',
-    registry.Boolean(True, _("""Determines whether the bot will automatically
+    registry.Boolean(True, """Determines whether the bot will automatically
     rotate the logs for this channel.  The bot will rotate logs when the
     timestamp for the log changes.  The timestamp is set according to
-    the 'filenameTimestamp' configuration variable.""")))
+    the 'filenameTimestamp' configuration variable."""))
 conf.registerChannelValue(MBChannelLogger, 'filenameTimestamp',
-    registry.String('%Y-%m-%d', _("""Determines how to represent the timestamp
+    registry.String('%Y-%m-%d', """Determines how to represent the timestamp
     used for the filename in rotated logs.  When this timestamp changes, the
     old logfiles will be closed and a new one started. The format characters
     for the timestamp are in the time.strftime docs at python.org.  In order
     for your logs to be rotated, you'll also have to enable
-    supybot.plugins.MBChannelLogger.rotateLogs.""")))
+    supybot.plugins.MBChannelLogger.rotateLogs."""))
 
 conf.registerGlobalValue(MBChannelLogger, 'directories',
-    registry.Boolean(True, _("""Determines whether the bot will partition its
-    channel logs into separate directories based on different criteria.""")))
+    registry.Boolean(True, """Determines whether the bot will partition its
+    channel logs into separate directories based on different criteria."""))
 conf.registerGlobalValue(MBChannelLogger.directories, 'network',
-    registry.Boolean(True, _("""Determines whether the bot will use a network
-    directory if using directories.""")))
+    registry.Boolean(True, """Determines whether the bot will use a network
+    directory if using directories."""))
 conf.registerGlobalValue(MBChannelLogger.directories, 'channel',
-    registry.Boolean(True, _("""Determines whether the bot will use a channel
-    directory if using directories.""")))
+    registry.Boolean(True, """Determines whether the bot will use a channel
+    directory if using directories."""))
 conf.registerGlobalValue(MBChannelLogger.directories, 'timestamp',
-    registry.Boolean(True, _("""Determines whether the bot will use a timestamp
+    registry.Boolean(True, """Determines whether the bot will use a timestamp
     (determined by supybot.plugins.MBChannelLogger.directories.timestamp.format)
-    if using directories.""")))
+    if using directories."""))
 conf.registerGlobalValue(MBChannelLogger.directories.timestamp, 'format',
-    registry.String('%Y-%m', _("""Determines what timestamp format will be used in
+    registry.String('%Y-%m', """Determines what timestamp format will be used in
     the directory structure for channel logs if
-    supybot.plugins.MBChannelLogger.directories.timestamp is True.""")))
+    supybot.plugins.MBChannelLogger.directories.timestamp is True."""))
 conf.registerGlobalValue(MBChannelLogger, 'cssLocation',
     registry.String('../../../../../plugins/MBChannelLogger/misc/style.css',
-        _("""Defines the location for the log CSS file.""")))
+        """Defines the location for the log CSS file."""))
 
 # vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:
