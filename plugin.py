@@ -46,30 +46,33 @@ import re
 #_ = PluginInternationalization('MBChannelLogger')
 
 def replaceurls(text):
-    urls = '(?: %s)' % '|'.join("""http https telnet gopher file wais ftp""".split())
-    ltrs = r'\w'              # Letters
-    gunk = r'/#~:.?+=&%@!\-'  # General/Unknown
-    punc = r'.:;?\-'          # Punctuation
-    any = "%(ltrs)s%(gunk)s%(punc)s" % { 'ltrs' : ltrs,
-                                         'gunk' : gunk,
-                                         'punc' : punc }
     url = r"""
-        \b                            # start at word boundary
-            %(urls)s    :             # need resource and a colon
-            [%(any)s]  +?             # followed by one or more
-                                      #  of any valid character, but
-                                      #  be conservative and take only
-                                      #  what you need to....
-        (?=                           # look-ahead non-consumptive assertion
-                [%(punc)s]*           # either 0 or more punctuation
-                (?:   [^%(any)s]      #  followed by a non-url char
-                    |                 #   or end of the string
-                      $
-                )
-        )
-        """ % {'urls' : urls,
-               'any' : any,
-               'punc' : punc }
+        \b
+        (                           # Capture 1: entire matched URL
+          (?:
+            [a-z][\w-]+:                # URL protocol and colon
+            (?:
+              /{1,3}                        # 1-3 slashes
+              |                             #   or
+              [a-z0-9%]                     # Single letter or digit or '%'
+                                            # (Trying not to match e.g. "URI::Escape")
+            )
+            |                           #   or
+            www\d{0,3}[.]               # "www.", "www1.", "www2." … "www999."
+            |                           #   or
+            [a-z0-9.\-]+[.][a-z]{2,4}/  # looks like domain name followed by a slash
+          )
+          (?:                           # One or more:
+            [^\s()<>]+                      # Run of non-space, non-()<>
+            |                               #   or
+            \(([^\s()<>]+|(\([^\s()<>]+\)))*\)  # balanced parens, up to 2 levels
+          )+
+          (?:                           # End with:
+            \(([^\s()<>]+|(\([^\s()<>]+\)))*\)  # balanced parens, up to 2 levels
+            |                                   #   or
+            [^\s`!()\[\]{};:'".,<>?«»“”‘’]        # not a space or one of these punct chars
+          )
+        )"""
     url_re = re.compile(url, re.VERBOSE | re.MULTILINE)
     return re.sub(url_re, '<a href="\g<0>">\g<0></a>', text)
 
